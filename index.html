@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kalkulator Kurs Invoice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: kartu kurs + konverter cepat di kiri, tabel item invoice di kanan; menumpuk satu kolom di layar sempit */
+:root {
+  --bg: #eef2f0;
+  --surface: #ffffff;
+  --field: #f6f8f7;
+  --ink: #14211d;
+  --muted: #5a6a65;
+  --line: #d3ddd9;
+  --accent: #0e6a5a;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcefe9;
+  --good: #1e7a3c;
+  --warn: #9a5c08;
+  --bad: #b3261e;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1412; --surface: #151d1a; --field: #1b2521; --ink: #e5eeea; --muted: #93a49e;
+    --line: #2a3733; --accent: #4cc0a6; --accent-ink: #062019; --accent-soft: #173a32;
+    --good: #5ccf85; --warn: #e3a64a; --bad: #f2867e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1412; --surface: #151d1a; --field: #1b2521; --ink: #e5eeea; --muted: #93a49e;
+  --line: #2a3733; --accent: #4cc0a6; --accent-ink: #062019; --accent-soft: #173a32;
+  --good: #5ccf85; --warn: #e3a64a; --bad: #f2867e; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-block: 24px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+h1 { margin: 0; font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { margin: 2px 0 0; color: var(--muted); font-size: 0.92rem; }
+.grid { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 880px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel h2 { margin: 0; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chip.live { color: var(--good); } .chip.cached { color: var(--warn); } .chip.manual { color: var(--accent); } .chip.err { color: var(--bad); } .chip.load { color: var(--muted); }
+
+.rate-big { display: flex; flex-direction: column; gap: 2px; }
+.rate-big .lbl { font-size: 0.85rem; color: var(--muted); }
+.rate-big .val { font-family: var(--font-num); font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.meta { font-size: 0.82rem; color: var(--muted); display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
+.meta dt { margin: 0; } .meta dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--field); color: var(--ink); font: inherit; font-size: 0.88rem; font-weight: 500; padding: 9px 8px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 500; }
+input[type="text"] {
+  font: inherit; color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: 7px;
+  padding: 9px 11px; width: 100%; min-width: 0;
+}
+input.numin { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint { font-size: 0.78rem; color: var(--muted); min-height: 1.1em; }
+.hint.bad { color: var(--bad); }
+
+.btn { font: inherit; font-size: 0.88rem; font-weight: 600; border-radius: 7px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--muted); padding: 6px 8px; }
+.btn.ghost:hover { color: var(--bad); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.conv { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; background: var(--field); }
+th.r, td.r { text-align: right; }
+td.idr { font-family: var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td .read { font-size: 0.74rem; color: var(--muted); text-align: right; font-family: var(--font-num); }
+td .read.bad { color: var(--bad); }
+td.no { color: var(--muted); font-family: var(--font-num); width: 2.5em; }
+tbody tr:last-child td { border-bottom: 0; }
+
+.totals { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; align-items: baseline; }
+.totals .k { color: var(--muted); font-size: 0.9rem; }
+.totals .v { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+.totals .grand { font-size: 1.5rem; font-weight: 600; color: var(--accent); }
+.terbilang { background: var(--accent-soft); border-radius: 8px; padding: 12px 14px; font-size: 0.92rem; font-style: italic; }
+.terbilang b { font-style: normal; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; display: block; margin-bottom: 2px; color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 8px; font-size: 0.88rem; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+.note { font-size: 0.8rem; color: var(--muted); margin: 0; max-width: 70ch; }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Kalkulator Kurs Invoice</h1>
+      <p class="sub">Konversi USD ke IDR untuk penagihan, dengan kurs otomatis atau kurs manual (KMK, JISDOR, kurs kontrak).</p>
+    </div>
+    <span id="status" class="chip load">Mengambil kurs…</span>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="panel" aria-labelledby="h-kurs">
+        <h2 id="h-kurs">Kurs yang dipakai</h2>
+        <div class="seg" role="group" aria-label="Sumber kurs">
+          <button type="button" id="mode-auto" aria-pressed="true">Otomatis (pasar)</button>
+          <button type="button" id="mode-manual" aria-pressed="false">Manual</button>
+        </div>
+        <div class="rate-big">
+          <span class="lbl">1 USD =</span>
+          <span class="val" id="rate-big">–</span>
+        </div>
+
+        <div id="auto-box" class="row" style="flex-direction:column;align-items:stretch;gap:10px">
+          <dl class="meta">
+            <dt>Sumber</dt><dd id="m-src">–</dd>
+            <dt>Data per</dt><dd id="m-upd">–</dd>
+            <dt>Dicek</dt><dd id="m-chk">–</dd>
+          </dl>
+          <div class="row">
+            <button class="btn" type="button" id="refresh">Perbarui kurs</button>
+            <button class="btn" type="button" id="lock">Kunci ke manual</button>
+          </div>
+        </div>
+
+        <div id="manual-box" class="row" style="flex-direction:column;align-items:stretch;gap:10px" hidden>
+          <label class="f" for="manual-rate">Kurs manual (IDR per 1 USD)
+            <input type="text" id="manual-rate" class="numin" inputmode="decimal" placeholder="contoh 16.250,00" autocomplete="off">
+          </label>
+          <div class="hint" id="manual-read"></div>
+          <label class="f" for="manual-label">Dasar kurs (dicantumkan saat salin)
+            <input type="text" id="manual-label" placeholder="contoh: Kurs KMK 13–19 Okt 2026" autocomplete="off">
+          </label>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="h-conv">
+        <h2 id="h-conv">Konversi cepat</h2>
+        <div class="conv">
+          <label class="f" for="q-usd">USD
+            <input type="text" id="q-usd" class="numin" inputmode="decimal" value="1,000.00" autocomplete="off">
+          </label>
+          <div class="hint" id="q-usd-read"></div>
+          <label class="f" for="q-idr">IDR
+            <input type="text" id="q-idr" class="numin" inputmode="decimal" autocomplete="off">
+          </label>
+          <div class="hint" id="q-idr-read"></div>
+          <div class="row"><button class="btn" type="button" id="q-copy">Salin nilai IDR</button></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel" aria-labelledby="h-inv">
+        <div class="row" style="justify-content:space-between">
+          <h2 id="h-inv">Item invoice</h2>
+          <div class="row">
+            <button class="btn" type="button" id="add">+ Tambah baris</button>
+            <button class="btn" type="button" id="clear">Kosongkan</button>
+          </div>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>#</th><th>Uraian</th><th class="r">Nilai USD</th><th class="r">Nilai IDR</th><th><span hidden>Hapus</span></th></tr></thead>
+            <tbody id="lines"></tbody>
+          </table>
+        </div>
+        <div class="totals">
+          <span class="k">Total USD</span><span class="v" id="t-usd">–</span>
+          <span class="k">Kurs</span><span class="v" id="t-rate">–</span>
+          <span class="k">Total IDR</span><span class="v grand" id="t-idr">–</span>
+        </div>
+        <div class="terbilang"><b>Terbilang</b><span id="t-words">–</span></div>
+        <div class="row">
+          <button class="btn primary" type="button" id="copy-total">Salin total IDR</button>
+          <button class="btn" type="button" id="copy-words">Salin terbilang</button>
+          <button class="btn" type="button" id="copy-table">Salin tabel (tempel ke Excel)</button>
+        </div>
+        <p class="note">Nilai IDR tiap baris dibulatkan ke rupiah penuh, lalu dijumlahkan, sehingga total sama dengan jumlah baris di invoice. Ketik angka dengan format apa pun (1,250.50 atau 1.250,50); angka yang terbaca ditampilkan di bawah kolom untuk dicek.</p>
+      </section>
+    </div>
+  </div>
+  <p class="note">Kurs otomatis diambil dari Frankfurter (kurs referensi Bank Sentral Eropa), terbit sekali tiap hari kerja, dicek ulang tiap 10 menit. Untuk Faktur Pajak gunakan Kurs KMK (Kemenkeu) lewat mode Manual.</p>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var KEY = "kurs-invoice-v1";
+
+  var fmtIDR = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  var fmtRate = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  var fmtUSD = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var fmtDate = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" });
+  var fmtDay = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" });
+
+  function rp(n) { return "Rp " + fmtIDR.format(n); }
+  function usd(n) { return "USD " + fmtUSD.format(n); }
+
+  // Membaca angka dari format US (1,250.50) maupun Indonesia (1.250,50)
+  function parseNum(raw) {
+    if (raw == null) return NaN;
+    var s = String(raw).trim().replace(/\s|rp|idr|usd|\$/gi, "");
+    if (!s) return NaN;
+    var hasC = s.indexOf(",") > -1, hasD = s.indexOf(".") > -1;
+    if (hasC && hasD) {
+      if (s.lastIndexOf(",") > s.lastIndexOf(".")) s = s.replace(/\./g, "").replace(",", ".");
+      else s = s.replace(/,/g, "");
+    } else if (hasC || hasD) {
+      var sep = hasC ? "," : ".";
+      var parts = s.split(sep);
+      if (parts.length > 2 || parts[1].length === 3) s = parts.join("");
+      else s = parts.join(".");
+    }
+    if (!/^-?\d+(\.\d+)?$/.test(s)) return NaN;
+    return Number(s);
+  }
+
+  // Terbilang dalam bahasa Indonesia
+  var SAT = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas"];
+  function tb(n) {
+    n = Math.floor(n);
+    if (n < 12) return SAT[n];
+    if (n < 20) return tb(n - 10) + " belas";
+    if (n < 100) return tb(n / 10) + " puluh " + tb(n % 10);
+    if (n < 200) return "seratus " + tb(n - 100);
+    if (n < 1e3) return tb(n / 100) + " ratus " + tb(n % 100);
+    if (n < 2e3) return "seribu " + tb(n - 1e3);
+    if (n < 1e6) return tb(n / 1e3) + " ribu " + tb(n % 1e3);
+    if (n < 1e9) return tb(n / 1e6) + " juta " + tb(n % 1e6);
+    if (n < 1e12) return tb(n / 1e9) + " miliar " + tb(n % 1e9);
+    if (n < 1e15) return tb(n / 1e12) + " triliun " + tb(n % 1e12);
+    return "";
+  }
+  function terbilang(n) {
+    if (!isFinite(n)) return "–";
+    if (n === 0) return "Nol rupiah";
+    var neg = n < 0;
+    var w = tb(Math.abs(n)).replace(/\s+/g, " ").trim();
+    if (!w) return "–";
+    w = (neg ? "minus " : "") + w + " rupiah";
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }
+
+  function toIDR(usdVal, rate) { return Math.round(Math.round(usdVal * 100) * rate / 100); }
+
+  // ---------- state ----------
+  var state = {
+    mode: "auto",
+    autoRate: null, autoSrc: "", autoUpd: null, autoChk: null, autoCached: false,
+    manualRaw: "", manualLabel: "",
+    lines: [
+      { desc: "Contoh: Jasa layanan periode Oktober 2026", usd: "12,500.00" },
+      { desc: "Contoh: Mobilisasi peralatan", usd: "3,750.00" }
+    ]
+  };
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (saved && typeof saved === "object") {
+      ["mode", "manualRaw", "manualLabel"].forEach(function (k) { if (typeof saved[k] === "string") state[k] = saved[k]; });
+      if (Array.isArray(saved.lines)) state.lines = saved.lines;
+      if (typeof saved.autoRate === "number") {
+        state.autoRate = saved.autoRate; state.autoSrc = saved.autoSrc || "";
+        state.autoUpd = saved.autoUpd ? new Date(saved.autoUpd) : null;
+        state.autoChk = saved.autoChk ? new Date(saved.autoChk) : null;
+        state.autoCached = true;
+      }
+    }
+  } catch (e) {}
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({
+        mode: state.mode, manualRaw: state.manualRaw, manualLabel: state.manualLabel, lines: state.lines,
+        autoRate: state.autoRate, autoSrc: state.autoSrc,
+        autoUpd: state.autoUpd ? state.autoUpd.toISOString() : null,
+        autoChk: state.autoChk ? state.autoChk.toISOString() : null
+      }));
+    } catch (e) {}
+  }
+
+  function manualRate() { var n = parseNum(state.manualRaw); return n > 0 ? n : null; }
+  function rate() { return state.mode === "auto" ? state.autoRate : manualRate(); }
+  function rateBasis() {
+    if (state.mode === "manual") return state.manualLabel ? state.manualLabel : "Kurs manual";
+    return "Kurs pasar " + (state.autoSrc || "") + (state.autoUpd ? " per " + fmtDay.format(state.autoUpd) : "");
+  }
+
+  // ---------- kurs otomatis ----------
+  var SOURCES = [
+    { name: "Frankfurter (ECB)", url: "https://api.frankfurter.dev/v1/latest?base=USD&symbols=IDR",
+      parse: function (j) { return { rate: j && j.rates && j.rates.IDR, upd: j && j.date ? new Date(j.date + "T00:00:00Z") : null }; } }
+  ];
+  var fetchErr = false, loading = false;
+
+  function getJSON(url) {
+    var ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var t = setTimeout(function () { if (ctl) ctl.abort(); }, 8000);
+    return fetch(url, { cache: "no-store", signal: ctl ? ctl.signal : undefined })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .finally(function () { clearTimeout(t); });
+  }
+  function fetchRate() {
+    if (loading) return;
+    loading = true; renderStatus();
+    var i = 0;
+    function next() {
+      if (i >= SOURCES.length) { loading = false; fetchErr = true; renderAll(); return; }
+      var s = SOURCES[i++];
+      getJSON(s.url).then(function (j) {
+        var r = s.parse(j);
+        if (!(typeof r.rate === "number" && r.rate > 5000 && r.rate < 50000)) throw new Error("data tidak valid");
+        state.autoRate = r.rate; state.autoSrc = s.name; state.autoUpd = r.upd; state.autoChk = new Date();
+        state.autoCached = false; fetchErr = false; loading = false;
+        save(); renderAll();
+      }).catch(next);
+    }
+    next();
+  }
+
+  // ---------- render ----------
+  function renderStatus() {
+    var el = $("status"), cls = "load", txt = "Mengambil kurs…";
+    if (state.mode === "manual") { cls = "manual"; txt = manualRate() ? "Kurs manual aktif" : "Isi kurs manual"; }
+    else if (loading && !state.autoRate) { cls = "load"; txt = "Mengambil kurs…"; }
+    else if (state.autoRate && !state.autoCached && !fetchErr) { cls = "live"; txt = "Kurs terhubung"; }
+    else if (state.autoRate) { cls = "cached"; txt = "Offline, pakai kurs terakhir"; }
+    else if (fetchErr) { cls = "err"; txt = "Kurs gagal diambil, pakai mode Manual"; }
+    el.className = "chip " + cls; el.textContent = txt;
+  }
+  function renderRate() {
+    var r = rate();
+    $("mode-auto").setAttribute("aria-pressed", String(state.mode === "auto"));
+    $("mode-manual").setAttribute("aria-pressed", String(state.mode === "manual"));
+    $("auto-box").hidden = state.mode !== "auto";
+    $("manual-box").hidden = state.mode !== "manual";
+    $("rate-big").textContent = r ? "Rp " + fmtRate.format(r) : "–";
+    $("m-src").textContent = state.autoSrc || "–";
+    $("m-upd").textContent = state.autoUpd ? fmtDay.format(state.autoUpd) : "–";
+    $("m-chk").textContent = state.autoChk ? fmtDate.format(state.autoChk) : "–";
+    $("refresh").disabled = loading;
+    $("refresh").textContent = loading ? "Memperbarui…" : "Perbarui kurs";
+    $("lock").disabled = !state.autoRate;
+    var mr = $("manual-read"), n = parseNum(state.manualRaw);
+    if (!state.manualRaw) { mr.textContent = "Format bebas: 16250, 16.250,50 atau 16,250.50"; mr.className = "hint"; }
+    else if (n > 0) { mr.textContent = "Terbaca: Rp " + fmtRate.format(n) + " per USD"; mr.className = "hint"; }
+    else { mr.textContent = "Angka tidak terbaca, periksa lagi"; mr.className = "hint bad"; }
+  }
+
+  var lastQ = "usd";
+  function renderQuick() {
+    var r = rate(), uIn = $("q-usd"), iIn = $("q-idr");
+    var u = parseNum(uIn.value), i = parseNum(iIn.value);
+    if (lastQ === "usd") {
+      $("q-usd-read").textContent = uIn.value ? (isFinite(u) ? "Terbaca: " + usd(u) : "Angka tidak terbaca") : "";
+      $("q-usd-read").className = "hint" + (uIn.value && !isFinite(u) ? " bad" : "");
+      if (document.activeElement !== iIn) iIn.value = r && isFinite(u) ? fmtIDR.format(toIDR(u, r)) : "";
+      $("q-idr-read").textContent = r ? "" : "Kurs belum tersedia"; $("q-idr-read").className = "hint";
+    } else {
+      $("q-idr-read").textContent = iIn.value ? (isFinite(i) ? "Terbaca: " + rp(i) : "Angka tidak terbaca") : "";
+      $("q-idr-read").className = "hint" + (iIn.value && !isFinite(i) ? " bad" : "");
+      if (document.activeElement !== uIn) uIn.value = r && isFinite(i) ? fmtUSD.format(i / r) : "";
+      $("q-usd-read").textContent = r ? "" : "Kurs belum tersedia"; $("q-usd-read").className = "hint";
+    }
+  }
+
+  function buildLines() {
+    var tb = $("lines"); tb.innerHTML = "";
+    state.lines.forEach(function (ln, idx) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td class="no">' + (idx + 1) + '</td>' +
+        '<td style="min-width:220px"><input type="text" id="d-' + idx + '" aria-label="Uraian baris ' + (idx + 1) + '"></td>' +
+        '<td style="min-width:150px"><input type="text" class="numin" inputmode="decimal" id="u-' + idx + '" aria-label="Nilai USD baris ' + (idx + 1) + '" placeholder="0.00"><div class="read" id="r-' + idx + '"></div></td>' +
+        '<td class="idr r" id="i-' + idx + '">–</td>' +
+        '<td style="width:1%"><button type="button" class="btn ghost" data-del="' + idx + '" aria-label="Hapus baris ' + (idx + 1) + '">✕</button></td>';
+      tb.appendChild(tr);
+      $("d-" + idx).value = ln.desc || "";
+      $("u-" + idx).value = ln.usd || "";
+    });
+    computeLines();
+  }
+
+  var totals = { usd: 0, idr: 0, ok: false };
+  function computeLines() {
+    var r = rate(), tU = 0, tI = 0, any = false, bad = false;
+    state.lines.forEach(function (ln, idx) {
+      var n = parseNum(ln.usd), cell = $("i-" + idx), rd = $("r-" + idx);
+      if (!cell) return;
+      if (!ln.usd) { rd.textContent = ""; rd.className = "read"; cell.textContent = "–"; return; }
+      if (!isFinite(n)) { rd.textContent = "tidak terbaca"; rd.className = "read bad"; cell.textContent = "–"; bad = true; return; }
+      rd.textContent = "= " + usd(n); rd.className = "read";
+      any = true; tU += Math.round(n * 100);
+      if (r) { var v = toIDR(n, r); tI += v; cell.textContent = rp(v); } else cell.textContent = "–";
+    });
+    tU = tU / 100;
+    totals = { usd: tU, idr: tI, ok: any && !!r && !bad };
+    $("t-usd").textContent = any ? usd(tU) : "–";
+    $("t-rate").textContent = r ? "Rp " + fmtRate.format(r) : "belum ada kurs";
+    $("t-idr").textContent = any && r ? rp(tI) : "–";
+    $("t-words").textContent = any && r ? terbilang(tI) : "–";
+  }
+
+  function renderAll() { renderStatus(); renderRate(); renderQuick(); computeLines(); }
+
+  // ---------- salin ----------
+  var toastT;
+  function toast(msg) { var t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove("on"); }, 1800); }
+  function copy(text, okMsg) {
+    function fallback() {
+      var ta = document.createElement("textarea"); ta.value = text; ta.setAttribute("readonly", "");
+      ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
+      var ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta); toast(ok ? okMsg : "Tidak bisa menyalin otomatis, salin manual");
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { toast(okMsg); }, fallback);
+    else fallback();
+  }
+
+  // ---------- event ----------
+  $("mode-auto").addEventListener("click", function () { state.mode = "auto"; save(); renderAll(); });
+  $("mode-manual").addEventListener("click", function () { state.mode = "manual"; save(); renderAll(); $("manual-rate").focus(); });
+  $("refresh").addEventListener("click", fetchRate);
+  $("lock").addEventListener("click", function () {
+    if (!state.autoRate) return;
+    state.manualRaw = fmtRate.format(state.autoRate);
+    state.manualLabel = "Kurs pasar " + state.autoSrc + (state.autoUpd ? " per " + fmtDay.format(state.autoUpd) : "");
+    $("manual-rate").value = state.manualRaw; $("manual-label").value = state.manualLabel;
+    state.mode = "manual"; save(); renderAll(); toast("Kurs dikunci, tidak akan berubah otomatis");
+  });
+  $("manual-rate").addEventListener("input", function (e) { state.manualRaw = e.target.value; save(); renderAll(); });
+  $("manual-label").addEventListener("input", function (e) { state.manualLabel = e.target.value; save(); });
+  $("q-usd").addEventListener("input", function () { lastQ = "usd"; renderQuick(); });
+  $("q-idr").addEventListener("input", function () { lastQ = "idr"; renderQuick(); });
+  $("q-copy").addEventListener("click", function () {
+    var v = parseNum($("q-idr").value);
+    if (!isFinite(v)) { toast("Belum ada nilai IDR"); return; }
+    copy(String(Math.round(v)), "Nilai IDR disalin");
+  });
+
+  $("lines").addEventListener("input", function (e) {
+    var m = /^([du])-(\d+)$/.exec(e.target.id); if (!m) return;
+    var ln = state.lines[+m[2]]; if (!ln) return;
+    if (m[1] === "d") ln.desc = e.target.value; else ln.usd = e.target.value;
+    save(); if (m[1] === "u") computeLines();
+  });
+  $("lines").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-del]"); if (!b) return;
+    state.lines.splice(+b.getAttribute("data-del"), 1);
+    if (!state.lines.length) state.lines.push({ desc: "", usd: "" });
+    save(); buildLines();
+  });
+  $("add").addEventListener("click", function () {
+    state.lines.push({ desc: "", usd: "" }); save(); buildLines();
+    $("d-" + (state.lines.length - 1)).focus();
+  });
+  var clearArmed = false, clearT;
+  $("clear").addEventListener("click", function () {
+    if (!clearArmed) { clearArmed = true; $("clear").textContent = "Klik lagi untuk kosongkan"; clearT = setTimeout(function () { clearArmed = false; $("clear").textContent = "Kosongkan"; }, 3000); return; }
+    clearTimeout(clearT); clearArmed = false; $("clear").textContent = "Kosongkan";
+    state.lines = [{ desc: "", usd: "" }]; save(); buildLines(); toast("Item invoice dikosongkan");
+  });
+
+  $("copy-total").addEventListener("click", function () {
+    if (!totals.ok) { toast("Total belum lengkap, cek kurs dan angka"); return; }
+    copy(String(totals.idr), "Total IDR disalin: " + rp(totals.idr));
+  });
+  $("copy-words").addEventListener("click", function () {
+    if (!totals.ok) { toast("Total belum lengkap"); return; }
+    copy(terbilang(totals.idr), "Terbilang disalin");
+  });
+  $("copy-table").addEventListener("click", function () {
+    var r = rate(); if (!r) { toast("Kurs belum tersedia"); return; }
+    var rows = [["No", "Uraian", "USD", "Kurs (IDR/USD)", "IDR"].join("\t")], n = 0;
+    state.lines.forEach(function (ln) {
+      var v = parseNum(ln.usd); if (!isFinite(v)) return; n++;
+      rows.push([n, (ln.desc || "").replace(/\t/g, " "), v.toFixed(2), r, toIDR(v, r)].join("\t"));
+    });
+    if (!n) { toast("Belum ada item"); return; }
+    rows.push(["", "TOTAL", totals.usd.toFixed(2), "", totals.idr].join("\t"));
+    rows.push(["", "Dasar kurs: " + rateBasis(), "", "", ""].join("\t"));
+    rows.push(["", "Terbilang: " + terbilang(totals.idr), "", "", ""].join("\t"));
+    copy(rows.join("\n"), "Tabel disalin, tempel di Excel");
+  });
+
+  // ---------- mulai ----------
+  $("manual-rate").value = state.manualRaw;
+  $("manual-label").value = state.manualLabel;
+  buildLines(); renderAll(); fetchRate();
+  setInterval(function () { if (!document.hidden) fetchRate(); }, 10 * 60 * 1000);
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && (!state.autoChk || Date.now() - state.autoChk.getTime() > 10 * 60 * 1000)) fetchRate();
+  });
+})();
+</script>
+</body>
+</html>
