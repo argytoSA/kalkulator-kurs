@@ -127,6 +127,15 @@ tbody tr:last-child td { border-bottom: 0; }
 }
 .panel { -webkit-backdrop-filter: blur(12px) saturate(120%); backdrop-filter: blur(12px) saturate(120%); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); }
 h1 { text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6); }
+/* Logo WCP: semi transparan di kiri atas, di atas pelat putih agar teks logo terbaca di latar gelap */
+.brand { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.brand > div { min-width: 0; }
+.logo {
+  height: 84px; width: auto; flex: none; padding: 4px 8px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92); opacity: 0.65; transition: opacity 0.25s;
+}
+.logo:hover { opacity: 0.95; }
+@media (max-width: 560px) { .brand { flex-direction: column; align-items: flex-start; gap: 10px; } .logo { height: 64px; } }
 
 </style>
 </head>
@@ -135,9 +144,12 @@ h1 { text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6); }
 <div class="earth" aria-hidden="true"><canvas id="earth"></canvas></div>
 <div class="wrap">
   <header>
-    <div>
-      <h1>Kalkulator Kurs Invoice</h1>
-      <p class="sub">Konversi USD ke IDR untuk penagihan, dengan kurs otomatis atau kurs manual (KMK, JISDOR, kurs kontrak).</p>
+    <div class="brand">
+      <img class="logo" alt="PT Wira Cipta Perkasa" width="256" height="174" src="wcp-logo.webp" onerror="this.hidden=true">
+      <div>
+        <h1>Kalkulator Kurs Invoice</h1>
+        <p class="sub">Konversi USD ke IDR untuk penagihan, dengan kurs otomatis atau kurs manual (KMK, JISDOR, kurs kontrak).</p>
+      </div>
     </div>
     <span id="status" class="chip load">Mengambil kurs…</span>
   </header>
