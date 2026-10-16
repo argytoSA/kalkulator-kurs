@@ -8,45 +8,41 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: kartu kurs + konverter cepat di kiri, tabel item invoice di kanan; menumpuk satu kolom di layar sempit */
+/* Layout: latar luar angkasa (bintang + bumi berputar di pojok kanan bawah), panel kaca gelap di atasnya; kartu kurs + konverter di kiri, tabel invoice di kanan */
 :root {
-  --bg: #eef2f0;
-  --surface: #ffffff;
-  --field: #f6f8f7;
-  --ink: #14211d;
-  --muted: #5a6a65;
-  --line: #d3ddd9;
-  --accent: #0e6a5a;
-  --accent-ink: #ffffff;
-  --accent-soft: #dcefe9;
-  --good: #1e7a3c;
-  --warn: #9a5c08;
-  --bad: #b3261e;
+  --bg: #04060c;
+  --surface: rgba(13, 19, 34, 0.74);
+  --field: rgba(255, 255, 255, 0.055);
+  --ink: #e7edf7;
+  --muted: #97a3b9;
+  --line: rgba(160, 185, 230, 0.18);
+  --accent: #6ad5c4;
+  --accent-ink: #04211c;
+  --accent-soft: rgba(106, 213, 196, 0.12);
+  --good: #6bd99a;
+  --warn: #f0b45c;
+  --bad: #ff8f86;
+  --atmo: rgba(96, 170, 255, 0.55);
   --font-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0e1412; --surface: #151d1a; --field: #1b2521; --ink: #e5eeea; --muted: #93a49e;
-    --line: #2a3733; --accent: #4cc0a6; --accent-ink: #062019; --accent-soft: #173a32;
-    --good: #5ccf85; --warn: #e3a64a; --bad: #f2867e; color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0e1412; --surface: #151d1a; --field: #1b2521; --ink: #e5eeea; --muted: #93a49e;
-  --line: #2a3733; --accent: #4cc0a6; --accent-ink: #062019; --accent-soft: #173a32;
-  --good: #5ccf85; --warn: #e3a64a; --bad: #f2867e; color-scheme: dark;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body {
-  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  background:
+    radial-gradient(ellipse 60% 45% at 12% 8%, rgba(70, 60, 140, 0.22), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 85% 30%, rgba(30, 90, 140, 0.16), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+  min-height: 100vh;
+  color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
   padding-block: 24px 48px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.wrap { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
 h1 { margin: 0; font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
 .sub { margin: 2px 0 0; color: var(--muted); font-size: 0.92rem; }
@@ -107,13 +103,36 @@ tbody tr:last-child td { border-bottom: 0; }
 .totals .grand { font-size: 1.5rem; font-weight: 600; color: var(--accent); }
 .terbilang { background: var(--accent-soft); border-radius: 8px; padding: 12px 14px; font-size: 0.92rem; font-style: italic; }
 .terbilang b { font-style: normal; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; display: block; margin-bottom: 2px; color: var(--muted); }
-.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 8px; font-size: 0.88rem; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: #04060c; padding: 9px 16px; border-radius: 8px; font-size: 0.88rem; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .toast.on { opacity: 1; }
 .note { font-size: 0.8rem; color: var(--muted); margin: 0; max-width: 70ch; }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+/* Luar angkasa */
+#stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.earth {
+  position: fixed; z-index: 0; pointer-events: none;
+  width: min(80vmin, 660px); aspect-ratio: 1; max-width: 100%;
+  right: calc(min(80vmin, 660px) * -0.18); bottom: calc(min(80vmin, 660px) * -0.2);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 32%, #3d7fc4, #14365f 55%, #050d1c 80%);
+  box-shadow: 0 0 40px 6px rgba(96, 170, 255, 0.28), 0 0 120px 30px rgba(60, 130, 230, 0.12);
+}
+.earth canvas { width: 100%; height: 100%; display: block; border-radius: 50%; }
+.earth::after {
+  content: ""; position: absolute; inset: -2%; border-radius: 50%;
+  background: radial-gradient(circle, transparent 66%, var(--atmo) 70.5%, rgba(96, 170, 255, 0.12) 72.5%, transparent 74%);
+}
+@media (max-width: 720px) {
+  .earth { width: 78vw; right: -22vw; bottom: auto; top: -18vw; opacity: 0.55; }
+}
+.panel { -webkit-backdrop-filter: blur(12px) saturate(120%); backdrop-filter: blur(12px) saturate(120%); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); }
+h1 { text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6); }
+
 </style>
 </head>
 <body>
+<canvas id="stars" aria-hidden="true"></canvas>
+<div class="earth" aria-hidden="true"><canvas id="earth"></canvas></div>
 <div class="wrap">
   <header>
     <div>
@@ -508,6 +527,73 @@ tbody tr:last-child td { border-bottom: 0; }
     rows.push(["", "Terbilang: " + terbilang(totals.idr), "", "", ""].join("\t"));
     copy(rows.join("\n"), "Tabel disalin, tempel di Excel");
   });
+
+
+  // ---------- latar luar angkasa ----------
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function drawStars() {
+    var cv = $("stars"), dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = window.innerWidth, h = window.innerHeight;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    var c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+    var seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+    var n = Math.round(w * h / 2200);
+    for (var k = 0; k < n; k++) {
+      var x = rnd() * w, y = rnd() * h, r = Math.pow(rnd(), 3) * 1.4 + 0.25, a = 0.25 + rnd() * 0.75;
+      var hue = rnd();
+      c.fillStyle = hue < 0.12 ? "rgba(255,214,170," + a + ")" : hue < 0.24 ? "rgba(170,200,255," + a + ")" : "rgba(255,255,255," + a + ")";
+      c.beginPath(); c.arc(x, y, r, 0, 6.2832); c.fill();
+      if (r > 1.25) { c.fillStyle = "rgba(200,220,255,0.08)"; c.beginPath(); c.arc(x, y, r * 4, 0, 6.2832); c.fill(); }
+    }
+  }
+  var starT; drawStars();
+  window.addEventListener("resize", function () { clearTimeout(starT); starT = setTimeout(drawStars, 150); });
+
+  // Bumi: tekstur Blue Marble diproyeksikan ke bola, berputar satu putaran per 2 menit
+  (function earth() {
+    var cv = $("earth"), N = 520; cv.width = N; cv.height = N;
+    var ctx = cv.getContext("2d");
+    var img = new Image(); img.crossOrigin = "anonymous";
+    img.onload = function () {
+      var TW = 1024, TH = 512, tc = document.createElement("canvas"); tc.width = TW; tc.height = TH;
+      var tx = tc.getContext("2d"); tx.drawImage(img, 0, 0, TW, TH);
+      var tex; try { tex = tx.getImageData(0, 0, TW, TH).data; } catch (e) { return; }
+      var R = N / 2, tilt = 23.4 * Math.PI / 180, ct = Math.cos(tilt), st = Math.sin(tilt);
+      var L = [-0.62, 0.38, 0.69], ll = Math.hypot(L[0], L[1], L[2]); L = [L[0] / ll, L[1] / ll, L[2] / ll];
+      var pix = [], uArr = [], rowArr = [], shArr = [], alArr = [];
+      for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+        var nx = (x + 0.5 - R) / R, ny = (R - y - 0.5) / R, d = Math.sqrt(nx * nx + ny * ny);
+        if (d > 1 + 1 / R) continue;
+        var dd = Math.min(d, 1), nz = Math.sqrt(Math.max(0, 1 - dd * dd));
+        var gx = nx * ct + ny * st, gy = -nx * st + ny * ct;
+        var lat = Math.asin(Math.max(-1, Math.min(1, gy))), lon = Math.atan2(gx, nz);
+        var u = (lon / (2 * Math.PI) + 0.5) * TW, v = Math.min(TH - 1, Math.max(0, Math.floor((0.5 - lat / Math.PI) * TH)));
+        var lam = nx * L[0] + ny * L[1] + nz * L[2];
+        var s = 0.1 + 1.05 * Math.max(0, lam) * (0.75 + 0.25 * nz);
+        pix.push((y * N + x) * 4); uArr.push(u); rowArr.push(v * TW); shArr.push(s);
+        alArr.push(Math.max(0, Math.min(1, (1 - d) * R * 1.2)) * 255);
+      }
+      var cnt = pix.length, P = Int32Array.from(pix), U = Float32Array.from(uArr), RW = Int32Array.from(rowArr), S = Float32Array.from(shArr), A = Uint8ClampedArray.from(alArr);
+      // START: bujur tengah awal (Indonesia, ~118 BT); bumi berputar ke timur, jadi permukaan bergeser ke kanan
+      var out = ctx.createImageData(N, N), od = out.data, lastOff = null, PERIOD = 120000, START = 118 / 360, t0 = performance.now();
+      function render(off) {
+        for (var k = 0; k < cnt; k++) {
+          var ui = ((U[k] + off + 2 * TW) | 0) % TW;
+          var ti = (RW[k] + ui) * 4, p = P[k], s = S[k];
+          od[p] = tex[ti] * s; od[p + 1] = tex[ti + 1] * s; od[p + 2] = tex[ti + 2] * s * 1.04 + 4; od[p + 3] = A[k];
+        }
+        ctx.putImageData(out, 0, 0);
+      }
+      function frame(now) {
+        var off = Math.floor((START - ((now - t0) % PERIOD) / PERIOD) * TW);
+        if (off !== lastOff) { lastOff = off; render(off); }
+        requestAnimationFrame(frame);
+      }
+      if (reduceMotion) render(Math.floor(START * TW)); else requestAnimationFrame(frame);
+    };
+    img.src = "https://cdn.jsdelivr.net/npm/three-globe@2.45.2/example/img/earth-blue-marble.jpg";
+  })();
 
   // ---------- mulai ----------
   $("manual-rate").value = state.manualRaw;
